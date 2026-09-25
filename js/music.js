@@ -1,5 +1,8 @@
 /* ============================================================
    music.js — Music playback (card + slideshow contexts)
+   Music is advanced ONLY by the 'ended' event on the audio
+   element. Nothing else in the codebase should reload a.src
+   or call playNext() except on genuine user actions.
    ============================================================ */
 (function(){
 'use strict';
@@ -30,7 +33,10 @@ window.buildPlaylistFor = function(ctx){
   return base; /* ✅ Always play in the order entered — no shuffle */
 };
 
-/* ✅ Simple sequential advance: only called when a song truly ENDS */
+/* ✅ The ONLY place a new song starts. Called from:
+   1. startMusicFor() when first starting a context.
+   2. the 'ended' event.
+   Never from slideshow.js. */
 window.playNext = function(){
   if(!CURR_LIST.length) return;
   CURR_IDX = (CURR_IDX+1)%CURR_LIST.length;
@@ -47,14 +53,12 @@ window.playNext = function(){
 };
 
 /* ✅ Expose a way for slideshow.js to update the shared CURR_CTX / CURR_LIST
-   WITHOUT reloading the audio element. It does NOT change the currently
-   playing song — only the list & context used for the NEXT advance. */
+   WITHOUT reloading the audio element. Keeps CURR_IDX pointing to the
+   currently loaded song so the next 'ended' advances to the correct next track. */
 window.__setCurrCtx__ = function(ctx, list){
   CURR_CTX = ctx;
   if(Array.isArray(list) && list.length){
     CURR_LIST = list.slice();
-    /* Keep CURR_IDX pointing to the song that is currently loaded,
-       so the next 'ended' event advances to the correct next track. */
     const a = $('audioPlayer');
     if(a && a.src){
       const curIdx = CURR_LIST.findIndex(u => a.src.indexOf(u) !== -1 || u.indexOf(a.src) !== -1);
@@ -77,17 +81,32 @@ window.startMusicFor = function(ctx){
     }
     return;
   }
-  /* If already playing the same context and list → leave it alone (do NOT restart). */
+  /* ✅ If the SAME list is already playing, do NOTHING — don't restart. */
   const sameList = CURR_LIST.length===list.length && CURR_LIST.every((u,i)=>u===list[i]);
   if(CURR_CTX===ctx && sameList && MUSIC_ON && !$('audioPlayer').paused) return;
 
+  /* If context changed but the currently playing song is already in the new list,
+     just adopt the new list/context without restarting the song. */
+  const a = $('audioPlayer');
+  if(a && a.src && !a.paused && CURR_CTX!==ctx){
+    const curIdx = list.findIndex(u => a.src.indexOf(u) !== -1 || u.indexOf(a.src) !== -1);
+    if(curIdx >= 0){
+      CURR_CTX = ctx;
+      CURR_LIST = list;
+      CURR_IDX = curIdx;
+      a.volume = window.getVol(ctx);
+      return;
+    }
+  }
+
+  /* Otherwise start fresh. */
   CURR_CTX = ctx; CURR_LIST = list; CURR_IDX = -1;
   playNext();
 };
 
 document.addEventListener('DOMContentLoaded', ()=>{
   const a = $('audioPlayer');
-  /* ✅ Only this 'ended' handler advances the song. Nothing else should. */
+  /* ✅ The ONLY event that advances to the next song. */
   if(a) a.addEventListener('ended', ()=>{ if(MUSIC_ON) playNext(); });
   const mt = $('musicToggle');
   if(mt) mt.onclick = ()=>{

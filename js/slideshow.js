@@ -1,5 +1,9 @@
 /* ============================================================
    slideshow.js — Full-screen memories slideshow
+   Music is handled ENTIRELY by music.js. This file only adjusts
+   volume (duck/unduck) when a video plays. It NEVER changes
+   audio.src, NEVER calls playNext, NEVER calls play() on the
+   shared audio player (except when first opening the slideshow).
    ============================================================ */
 (function(){
 'use strict';
@@ -66,9 +70,10 @@ function SS_playVideo(v, unmuteBtn){
      });
   }else{ if(unmuteBtn) unmuteBtn.classList.add('show'); }
 }
-function SS_fadeMusic(target, duration){
+
+/* ✅ Volume-only fade. NEVER touches src, NEVER calls play(). */
+function SS_fadeVolume(target, duration){
   const a = $('audioPlayer'); if(!a) return;
-  /* Do NOT call a.play() here — leave playback state alone. Only change volume. */
   const start = a.volume;
   if(Math.abs(start-target)<0.01){ a.volume = target; return; }
   const steps = Math.max(1, Math.round((duration||400)/30));
@@ -84,10 +89,9 @@ function SS_fadeMusic(target, duration){
 function SS_normalMusicVol(){ return window.getVol('slideshow'); }
 function SS_duckedMusicVol(){ return Math.max(0.05, SS_normalMusicVol()*0.35); }
 
-/* ✅ Ensure the audio player is set up for slideshow context, but DO NOT
-   interrupt a song that is already playing. Just update the context/list
-   so future 'ended' events advance through the correct playlist. */
-function SS_ensureMusicPlaying(){
+/* ✅ Called ONLY once when slideshow opens. After that, we never
+   touch the audio element's src/play state. */
+function SS_startMusicOnce(){
   const a = $('audioPlayer'); if(!a) return;
   const mode = (S.CURR.shared||{}).music_mode || 'both';
   if(mode==='card') return;
@@ -98,25 +102,23 @@ function SS_ensureMusicPlaying(){
   else wantList = (ssList && ssList.length) ? ssList : cardList;
   if(!wantList || !wantList.length) return;
 
-  /* Tell music.js the context & list — but DON'T touch a.src if it's playing. */
+  /* Tell music.js the new context/list — do NOT reload current song */
   if(window.__setCurrCtx__) window.__setCurrCtx__('slideshow', wantList);
 
-  /* If a song is already playing, just adjust volume. Do nothing else. */
+  /* If a song is already playing, only adjust volume. */
   if(a.src && !a.paused){
     a.volume = window.getVol(ssList.length ? 'slideshow' : 'card');
     const mt = $('musicToggle');
     if(mt){ mt.textContent='🔊'; mt.classList.add('visible'); }
     return;
   }
-
-  /* Nothing is playing — start the first song in the list. */
+  /* If paused with a src → resume it. */
   if(a.src){
-    /* Paused with a src → resume it. */
     a.volume = window.getVol(ssList.length ? 'slideshow' : 'card');
     a.play().catch(()=>{});
     return;
   }
-  /* Fresh start */
+  /* Fresh start → load first song. */
   a.volume = window.getVol(ssList.length ? 'slideshow' : 'card');
   a.loop = false;
   a.src = wantList[0];
@@ -126,9 +128,6 @@ function SS_ensureMusicPlaying(){
     if(mt){ mt.textContent='🔊'; mt.classList.add('visible'); }
   }).catch(()=>{});
 }
-
-/* ✅ REMOVED: SS_advanceMusicOnSlideChange — no longer needed.
-   Songs are only advanced by the 'ended' event in music.js. */
 
 function SS_applySavedMediaOrder(rows){
   const s = S.CURR.shared || {};
@@ -338,6 +337,8 @@ function SS_animateTrackTo(){
   t.style.transform = `translateX(-${SS_IDX*100}%)`;
 }
 
+/* ✅ SS_updateSlide does NOT touch the audio player AT ALL anymore,
+   except for volume duck/unduck on video slides. */
 function SS_updateSlide(){
   const t = $('slidesTrack');
   SS_animateTrackTo();
@@ -358,7 +359,7 @@ function SS_updateSlide(){
 
   if(cur.type==='video'){
     /* Duck music under video */
-    if(SS_musicDucked!==true){ SS_fadeMusic(SS_duckedMusicVol(), 300); SS_musicDucked = true; }
+    if(SS_musicDucked!==true){ SS_fadeVolume(SS_duckedMusicVol(), 300); SS_musicDucked = true; }
     const v = slideEl.querySelector('video');
     const ub = slideEl.querySelector('.unmute-btn');
     if(v){
@@ -369,15 +370,8 @@ function SS_updateSlide(){
     const pb = $('slideshowProgress');
     if(pb){ pb.style.transition='none'; pb.style.width='0%'; }
   }else{
-    /* Photo slide — make sure music context is set, but DO NOT touch playback. */
-    const a = $('audioPlayer');
-    const mode = (S.CURR.shared||{}).music_mode || 'both';
-    if(a && mode!=='card' && (!a.src || a.paused)){
-      /* Music wasn't started yet — start it now. */
-      SS_ensureMusicPlaying();
-    }
-    /* Un-duck if we were ducked for a video */
-    if(SS_musicDucked!==false){ SS_fadeMusic(SS_normalMusicVol(), 300); SS_musicDucked = false; }
+    /* Photo slide — ONLY unduck. Do NOT start/restart music. */
+    if(SS_musicDucked!==false){ SS_fadeVolume(SS_normalMusicVol(), 300); SS_musicDucked = false; }
 
     SS_preloadAhead();
 
@@ -440,9 +434,9 @@ function SS_close(){
   const dots = $('slideshowDots'); if(dots) dots.innerHTML = '';
   const pb = $('slideshowProgress'); if(pb){ pb.style.transition='none'; pb.style.width='0%'; }
   SS_musicDucked = false;
+  /* ✅ Restore volume to card level — but do NOT reload or restart. */
   const a = $('audioPlayer');
   if(a){ a.volume = window.getVol('card'); }
-  if(typeof window.startMusicFor==='function') window.startMusicFor('card');
   if(!S.PREVIEW_MODE && S.CURRENT_PERSON) window.openClosingModal();
 }
 
@@ -462,18 +456,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
     SS_isOpen = true;
     SS_musicDucked = false;
 
-    SS_ensureMusicPlaying();
+    /* ✅ Music started exactly once, right here. */
+    SS_startMusicOnce();
 
-    const kick = ()=>{ if(SS_isOpen) SS_ensureMusicPlaying(); };
-    const ov = $('slideshowOverlay');
-    if(ov){
-      ov.addEventListener('touchstart', kick, {once:true, passive:true});
-      ov.addEventListener('mousedown', kick, {once:true});
-      ov.addEventListener('click', kick, {once:true});
-    }
     SS_startFloaters();
     SS_updateSlide();
-    SS_ensureMusicPlaying();
   };
 
   const prevBtn = $('slideshowPrev'); if(prevBtn) prevBtn.onclick = SS_prev;
@@ -513,10 +500,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
       if(t) Array.from(t.children).forEach(slideEl=>{
         const v = slideEl.querySelector('video'); if(v && !v.paused) v.pause();
       });
-      const a = $('audioPlayer'); if(a) a.pause();
+      /* ✅ Do NOT pause the shared music player here — music.js owns it. */
     }else if(SS_isOpen){
-      const a = $('audioPlayer');
-      if(a && a.src){ a.play().catch(()=>{}); }
+      /* ✅ Do NOT resume the shared music player here either. */
       const cur = SS[SS_IDX];
       if(cur && cur.type!=='video'){
         if(!SS_T){
