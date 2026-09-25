@@ -97,10 +97,21 @@ function SS_ensureMusicPlaying(){
   else wantList = (ssList && ssList.length) ? ssList : cardList;
   if(!wantList || !wantList.length) return;
   const sameList = SS_ownPlaylist && SS_ownPlaylist.length===wantList.length && SS_ownPlaylist.every((u,i)=>u===wantList[i]);
-  if(sameList && SS_ownIdx>=0 && a.src && !a.paused){
-    a.volume = window.getVol('slideshow');
+
+  /* ✅ If the same playlist is already loaded, just resume / keep playing.
+     DO NOT reload the source — that resets currentTime to 0. */
+  if(sameList && SS_ownIdx>=0 && a.src){
+    const vol = window.getVol(ssList.length ? 'slideshow' : 'card');
+    if(a.paused){
+      a.volume = vol;
+      a.play().catch(()=>{});
+    } else {
+      a.volume = vol;
+    }
     return;
   }
+
+  /* Different playlist (or first time) — load the first song */
   SS_ownPlaylist = wantList;
   SS_ownIdx = 0;
   window.__setCurrCtx__ && window.__setCurrCtx__('slideshow', wantList);
@@ -124,6 +135,16 @@ function SS_advanceMusicOnSlideChange(){
   if(mode==='slideshow') wantList = ssList;
   else wantList = (ssList && ssList.length) ? ssList : cardList;
   if(!wantList || wantList.length<2) return;
+
+  /* ✅ KEY FIX:
+     If the current song is still mid-play (not paused, not ended, and
+     has progressed past 0), leave it alone. The next song should only
+     start when the current one truly finishes. */
+  if(a.src && !a.paused && !a.ended && a.currentTime > 0.01){
+    return;
+  }
+
+  /* Otherwise, advance to next song in the shuffled order */
   SS_ownPlaylist = wantList;
   SS_ownIdx = (SS_ownIdx+1)%wantList.length;
   a.src = wantList[SS_ownIdx];
@@ -378,6 +399,7 @@ function SS_updateSlide(){
         if(a.src){ a.play().catch(()=>{}); }
         else { SS_ensureMusicPlaying(); }
       } else {
+        /* ✅ Only advance if the song genuinely ended. Otherwise keep playing. */
         SS_advanceMusicOnSlideChange();
       }
     }
