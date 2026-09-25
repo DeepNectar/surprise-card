@@ -1,0 +1,11 @@
+@media (max-width:600px){
+  .home-btn{min-width:130px;padding:.9rem 1rem;font-size:.95rem}
+  .card{padding:1.8rem 1.15rem}
+  h1.card-title{font-size:1.85rem}
+  .names{font-size:1.35rem;padding:.5rem 1.7rem}
+  .slideshow-nav{width:2.6rem;height:2.6rem}
+  .panel-content{padding:1.3rem .9rem}
+  .slider-row label{flex:0 0 100px}
+  .tz-row{grid-template-columns:1fr}
+  .tz-row .tz-select{min-width:0}
+}
