@@ -144,7 +144,7 @@ function SS_advanceMusicOnSlideChange(){
     return;
   }
 
-  /* Otherwise, advance to next song in the shuffled order */
+  /* Otherwise, advance to next song in the playlist order */
   SS_ownPlaylist = wantList;
   SS_ownIdx = (SS_ownIdx+1)%wantList.length;
   a.src = wantList[SS_ownIdx];

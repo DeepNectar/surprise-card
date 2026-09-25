@@ -136,7 +136,6 @@ function fillAdminFields(){
   tgl('f_showLockScreen', sh.showLockScreen);
   tgl('f_pinSlideshowEnabled', sh.pinSlideshowEnabled);
   tgl('f_storySlideshowEnabled', sh.storySlideshowEnabled);
-  tgl('f_shuffleMusicOn', sh.shuffleMusicOn);
   tgl('f_shuffleMediaOn', sh.shuffleMediaOn);
   tgl('f_slideEffectsEnabled', sh.slideEffectsEnabled!==undefined ? sh.slideEffectsEnabled : 'true');
   tgl('f_floatersEnabled', sh.floatersEnabled!==undefined ? sh.floatersEnabled : 'true');
@@ -203,7 +202,6 @@ function readAdminFields(){
   sh.pinSlideshowEnabled = tgl('f_pinSlideshowEnabled');
   sh.storySlideshowEnabled = tgl('f_storySlideshowEnabled');
   sh.adminLoginEnabled = tgl('f_adminLoginEnabled');
-  sh.shuffleMusicOn = tgl('f_shuffleMusicOn');
   sh.shuffleMediaOn = tgl('f_shuffleMediaOn');
   sh.slideEffectsEnabled = tgl('f_slideEffectsEnabled');
   sh.floatersEnabled = tgl('f_floatersEnabled');
@@ -586,17 +584,10 @@ async function saveAdminAll(){
   saveAdminTextsFromFields(S.ADMIN_EDIT_LANG);
   readAdminFields();
   const sh = S.CURR.shared || {};
-  if(String(sh.shuffleMusicOn)==='true'){
-    const idxs = [];
-    for(let i=1;i<=5;i++){
-      const on = String(sh['song'+i+'_on'])==='true';
-      const url = (sh['song'+i+'_url']||'').trim();
-      if(on && url) idxs.push(i-1);
-    }
-    sh.musicOrder = idxs.length ? shuffleArray(idxs).join(',') : '';
-  }else{
-    sh.musicOrder = '';
-  }
+
+  /* ✅ Music shuffle removed — always use the order entered */
+  sh.musicOrder = '';
+
   if(String(sh.shuffleMediaOn)==='true'){
     const n = (S.CURR.media||[]).length;
     sh.mediaOrder = n>1 ? shuffleArray(Array.from({length:n},(_,i)=>i)).join(',') : '';
@@ -749,7 +740,6 @@ window.openPersonDetails = async function(p){
     + row('Effects intensity',shared.effectsIntensity)
     + row('Floaters enabled',shared.floatersEnabled==='true'?'✅ On':'❌ Off')
     + row('Floater density',shared.floaterDensity)
-    + row('Shuffle music on save',shared.shuffleMusicOn==='true'?'✅ On':'❌ Off')
     + row('Shuffle media on save',shared.shuffleMediaOn==='true'?'✅ On':'❌ Off');
   ['enableFireworks','enableGiftBox','enableVoiceMsg','enableVideoMsg','enableEventCount','enableStory','enableMap','enableUpload','showLockScreen','pinSlideshowEnabled','storySlideshowEnabled'].forEach(k=>{
     h += row(k, shared[k]==='true'?'✅ On':'❌ Off');

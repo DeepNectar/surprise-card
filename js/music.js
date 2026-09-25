@@ -27,18 +27,7 @@ window.buildPlaylistFor = function(ctx){
     if(!on||!url) continue;
     if(w==='both'||w===ctx) base.push(url);
   }
-  if(String(s.shuffleMusicOn)!=='true') return base;
-  const orderStr = (s.musicOrder||'').trim();
-  if(orderStr && base.length>1){
-    const idxs = orderStr.split(',').map(x=>parseInt(x,10)).filter(x=>!isNaN(x) && x>=0 && x<base.length);
-    if(idxs.length===base.length){
-      const seen = new Set(); const out = [];
-      idxs.forEach(i=>{ if(!seen.has(i)){ seen.add(i); out.push(base[i]); } });
-      base.forEach((u,i)=>{ if(!seen.has(i)) out.push(u); });
-      return out;
-    }
-  }
-  return base;
+  return base; /* ✅ Always play in the order entered — no shuffle */
 };
 
 window.playNext = function(){
