@@ -56,6 +56,16 @@ window.playNext = function(){
   });
 };
 
+/* ✅ Expose a way for slideshow.js to update the shared CURR_CTX / CURR_LIST
+   WITHOUT reloading the audio element (this was the source of the restart bug). */
+window.__setCurrCtx__ = function(ctx, list){
+  CURR_CTX = ctx;
+  if(Array.isArray(list) && list.length){
+    CURR_LIST = list.slice();
+    CURR_IDX = 0;
+  }
+};
+
 window.startMusicFor = function(ctx){
   const list = buildPlaylistFor(ctx);
   $('musicToggle').classList.toggle('visible', list.length>0);
