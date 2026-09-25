@@ -30,6 +30,7 @@ window.buildPlaylistFor = function(ctx){
   return base; /* ✅ Always play in the order entered — no shuffle */
 };
 
+/* ✅ Simple sequential advance: only called when a song truly ENDS */
 window.playNext = function(){
   if(!CURR_LIST.length) return;
   CURR_IDX = (CURR_IDX+1)%CURR_LIST.length;
@@ -46,12 +47,21 @@ window.playNext = function(){
 };
 
 /* ✅ Expose a way for slideshow.js to update the shared CURR_CTX / CURR_LIST
-   WITHOUT reloading the audio element (this was the source of the restart bug). */
+   WITHOUT reloading the audio element. It does NOT change the currently
+   playing song — only the list & context used for the NEXT advance. */
 window.__setCurrCtx__ = function(ctx, list){
   CURR_CTX = ctx;
   if(Array.isArray(list) && list.length){
     CURR_LIST = list.slice();
-    CURR_IDX = 0;
+    /* Keep CURR_IDX pointing to the song that is currently loaded,
+       so the next 'ended' event advances to the correct next track. */
+    const a = $('audioPlayer');
+    if(a && a.src){
+      const curIdx = CURR_LIST.findIndex(u => a.src.indexOf(u) !== -1 || u.indexOf(a.src) !== -1);
+      CURR_IDX = curIdx >= 0 ? curIdx : 0;
+    } else {
+      CURR_IDX = 0;
+    }
   }
 };
 
@@ -67,13 +77,17 @@ window.startMusicFor = function(ctx){
     }
     return;
   }
-  if(CURR_CTX===ctx && MUSIC_ON && !$('audioPlayer').paused) return;
+  /* If already playing the same context and list → leave it alone (do NOT restart). */
+  const sameList = CURR_LIST.length===list.length && CURR_LIST.every((u,i)=>u===list[i]);
+  if(CURR_CTX===ctx && sameList && MUSIC_ON && !$('audioPlayer').paused) return;
+
   CURR_CTX = ctx; CURR_LIST = list; CURR_IDX = -1;
   playNext();
 };
 
 document.addEventListener('DOMContentLoaded', ()=>{
   const a = $('audioPlayer');
+  /* ✅ Only this 'ended' handler advances the song. Nothing else should. */
   if(a) a.addEventListener('ended', ()=>{ if(MUSIC_ON) playNext(); });
   const mt = $('musicToggle');
   if(mt) mt.onclick = ()=>{
