@@ -1,11 +1,78 @@
+/* ============================================================
+   responsive.css — Mobile & tablet refinements
+   ============================================================ */
+@media (max-width:900px){
+  .panel-content{max-width:100%}
+  .info-content{padding:1.6rem 1.2rem}
+}
+
 @media (max-width:600px){
+  .home-screen{padding:1.4rem 1rem}
+  .home-hero-card{padding:1.5rem 1.1rem 1.4rem;border-radius:1.6rem}
   .home-btn{min-width:130px;padding:.9rem 1rem;font-size:.95rem}
+  .home-btn .home-btn-emoji{font-size:1.7rem}
+  .home-title{font-size:1.6rem}
+  .home-sub{font-size:.92rem}
+  .home-intro,.home-changelog{padding:.9rem}
+  .home-intro .hi-step{padding:.55rem .65rem}
   .card{padding:1.8rem 1.15rem}
   h1.card-title{font-size:1.85rem}
   .names{font-size:1.35rem;padding:.5rem 1.7rem}
-  .slideshow-nav{width:2.6rem;height:2.6rem}
-  .panel-content{padding:1.3rem .9rem}
-  .slider-row label{flex:0 0 100px}
+  .message{font-size:1.02rem;padding:1.2rem 1rem}
+  .message .greeting{font-size:1.1rem}
+  .slideshow-nav{width:2.6rem;height:2.6rem;font-size:1.1rem}
+  .slideshow-nav.prev{left:.5rem}
+  .slideshow-nav.next{right:.5rem}
+  .slideshow-close{top:.6rem;right:.6rem;width:2rem;height:2rem}
+  .panel-content{padding:1.3rem .9rem;border-radius:1.2rem}
+  .info-content{padding:1.4rem 1rem;border-radius:1.4rem}
+  .pw-content{padding:1.6rem 1.1rem}
+  .slider-row{flex-wrap:wrap}
+  .slider-row label{flex:1 1 100%;margin-bottom:.2rem}
+  .slider-row .slider-val{flex:0 0 40px}
   .tz-row{grid-template-columns:1fr}
   .tz-row .tz-select{min-width:0}
+  .panel-tab{font-size:.72rem;padding:.5rem .65rem}
+  .card{padding:1.6rem 1rem}
+  .counter-item{padding:.5rem .3rem;gap:.55rem}
+  .counter-icon{font-size:1.3rem}
+  .counter-time{font-size:.92rem}
+  .viewer-topbar{flex-wrap:wrap;gap:.35rem}
+  .viewer-back,.viewer-share-btn,.viewer-darkmode-btn,
+  .viewer-edit-card-btn{padding:.42rem .8rem;font-size:.78rem}
+  .viewer-seen-pill{font-size:.68rem;padding:.3rem .6rem}
+  .reaction-btn{min-width:50px;padding:.45rem .6rem;font-size:1.25rem}
+  .music-toggle,.lang-toggle,.darkmode-toggle{
+    width:2.9rem;height:2.9rem;font-size:1.15rem;
+  }
+  .lang-toggle{right:4.1rem}
+  .darkmode-toggle{right:7.3rem}
+  .map-canvas{height:280px}
+}
+
+@media (max-width:380px){
+  .home-btn{min-width:110px;padding:.8rem .75rem;font-size:.88rem}
+  .home-btn .home-btn-emoji{font-size:1.5rem}
+  .home-btn-bday{font-size:.6rem}
+  .home-title{font-size:1.4rem}
+  h1.card-title{font-size:1.55rem}
+  .names{font-size:1.15rem;padding:.45rem 1.3rem}
+  .cd-box{min-width:60px;padding:.55rem .4rem}
+  .open-early-btn{font-size:.92rem;padding:.75rem 1.4rem}
+  .panel-tab{font-size:.68rem;padding:.45rem .55rem}
+}
+
+@media (hover:none){
+  .home-btn:hover{transform:none;background:rgba(255,255,255,.14)}
+  .home-reviews .hr-item:hover{transform:none}
+  .gift-box:hover{transform:none}
+  .reaction-btn:hover{transform:none}
+  .theme-swatch:hover{transform:none}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .home-screen::before,.home-screen::after{animation:none}
+  .home-emoji::before,.home-emoji::after{animation:none}
+  .home-title{animation:none}
+  .hf,.home-hero-card::before{animation:none}
 }

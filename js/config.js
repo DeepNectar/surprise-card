@@ -4,28 +4,31 @@
 (function(){
 'use strict';
 
-window.SUPABASE_URL='https://ueuxnkrvvnvldfwgiyqy.supabase.co';
-window.SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVldXhua3J2dm52bGRmd2dpeXF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3MjM0ODUsImV4cCI6MjEwNTI5OTQ4NX0.DwDSWdnVK1-eWLvSuXpsf22PLtMVq_ZJ-1Kq39AoOSI';
+window.SUPABASE_URL = 'https://ueuxnkrvvnvldfwgiyqy.supabase.co';
+window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVldXhua3J2dm52bGRmd2dpeXF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3MjM0ODUsImV4cCI6MjEwNTI5OTQ4NX0.DwDSWdnVK1-eWLvSuXpsf22PLtMVq_ZJ-1Kq39AoOSI';
 
-window.T_PEOPLE='people';
-window.T_SETTINGS='settings';
-window.T_MEDIA='media';
-window.T_GIFTS='gifts';
-window.T_STORY='story_pages';
-window.T_EVENTS='event_countdowns';
-window.T_VOICE='voice_messages';
-window.T_VIDEO='video_messages';
-window.T_PINS='map_pins';
-window.T_GUEST='guest_submissions';
-window.T_UPLOADS='uploads';
-window.T_REVIEWS='reviews';
+/* ---------- Table names ---------- */
+window.T_PEOPLE   = 'people';
+window.T_SETTINGS = 'settings';
+window.T_MEDIA    = 'media';
+window.T_GIFTS    = 'gifts';
+window.T_STORY    = 'story_pages';
+window.T_EVENTS   = 'event_countdowns';
+window.T_VOICE    = 'voice_messages';
+window.T_VIDEO    = 'video_messages';
+window.T_PINS     = 'map_pins';
+window.T_GUEST    = 'guest_submissions';
+window.T_UPLOADS  = 'uploads';
+window.T_REVIEWS  = 'reviews';
 
-window.FALLBACK_ADMIN_PW='Deepnectar@@1617@@';
-window.PUBLIC_CARD_LINK='https://surprise-clickandcheck-your-surprise2.netlify.app/';
-window.DEFAULT_TZ='Asia/Dubai';
+/* ---------- App-wide constants ---------- */
+window.FALLBACK_ADMIN_PW = 'Deepnectar@@1617@@';
+window.PUBLIC_CARD_LINK  = 'https://surprise-clickandcheck-your-surprise2.netlify.app/';
+window.DEFAULT_TZ        = 'Asia/Dubai';
 window.MODAL_IMG_DURATION_MS = 10000;
 
-window.TZ_OPTIONS=[
+/* ---------- Timezones ---------- */
+window.TZ_OPTIONS = [
   {v:'Asia/Dubai',l:'🇦🇪 Dubai / UAE (UTC+4) — default'},
   {v:'Asia/Kolkata',l:'🇮🇳 India (UTC+5:30)'},
   {v:'Asia/Karachi',l:'🇵🇰 Pakistan (UTC+5)'},
@@ -64,53 +67,81 @@ window.TZ_OPTIONS=[
   {v:'UTC',l:'🌐 UTC (no offset)'}
 ];
 
-/* Global shared state */
+/* ---------- Central page state ---------- */
 const S = window.__PAGE_STATE__ = window.__PAGE_STATE__ || {};
 S.PEOPLE = S.PEOPLE || [];
 S.CURR = S.CURR || {
-  texts:{}, textsByLang:{en:{},gu:{},hi:{}}, shared:{},
-  gifts:[], story:[], events:[], voice:[], video:[], pins:[], media:[]
+  texts: {},
+  textsByLang: {en:{}, gu:{}, hi:{}},
+  shared: {},
+  gifts: [], story: [], events: [],
+  voice: [], video: [], pins: [], media: []
 };
-S.CURRENT_PERSON = S.CURRENT_PERSON || null;
-S.ADMIN_MODE = S.ADMIN_MODE || false;
-S.PREVIEW_MODE = S.PREVIEW_MODE || false;
-S.CURRENT_SETTINGS = S.CURRENT_SETTINGS || {};
+S.CURRENT_PERSON      = S.CURRENT_PERSON      || null;
+S.ADMIN_MODE          = S.ADMIN_MODE          || false;
+S.PREVIEW_MODE        = S.PREVIEW_MODE        || false;
+S.CURRENT_SETTINGS    = S.CURRENT_SETTINGS    || {};
 S.ADMIN_EDIT_PERSON_ID = S.ADMIN_EDIT_PERSON_ID || null;
-S.CURR_LANG = S.CURR_LANG || 'en';
-S.LOGIN_TARGET = S.LOGIN_TARGET || null;
-S.CURRENT_TEXTS_BY_LANG = S.CURRENT_TEXTS_BY_LANG || {en:{},gu:{},hi:{}};
-S.ADMIN_EDIT_LANG = 'en';
-S.GUEST_TEXTS = S.GUEST_TEXTS || {en:{},gu:{},hi:{}};
-S.GUEST_EDIT_LANG = 'en';
-S.CARD_STARTED = false;
-S.REVIEWS = S.REVIEWS || [];
-S.HOME_REVIEW_LIMIT = S.HOME_REVIEW_LIMIT || 10;
-S.REVIEW_STARS = 0;
-S.EXPANDED_PEOPLE = S.EXPANDED_PEOPLE || new Set();
-S.REQUESTER_MODE = S.REQUESTER_MODE || false;
+S.CURR_LANG           = S.CURR_LANG           || 'en';
+S.LOGIN_TARGET        = S.LOGIN_TARGET        || null;
+S.ADMIN_EDIT_LANG     = 'en';
+S.GUEST_TEXTS         = S.GUEST_TEXTS         || {en:{}, gu:{}, hi:{}};
+S.GUEST_EDIT_LANG     = 'en';
+S.CARD_STARTED        = false;
+S.REVIEWS             = S.REVIEWS             || [];
+S.HOME_REVIEW_LIMIT   = S.HOME_REVIEW_LIMIT   || 10;
+S.REVIEW_STARS        = 0;
+S.EXPANDED_PEOPLE     = S.EXPANDED_PEOPLE     || new Set();
+S.REQUESTER_MODE      = S.REQUESTER_MODE      || false;
+S.REACTIONS           = S.REACTIONS           || {heart:0, love:0, cry:0, party:0};
+S.DARK_MODE           = S.DARK_MODE           || false;
+S.REVIEWS_COLLAPSED   = true;
 
+/* ---------- Guest editor state ---------- */
 window.GE = {
-  person:{display_name:'',slug:'',birthday:''},
-  guest:{name:'',whatsapp:'',relation:'',occasion:'',note:''},
-  password:'', texts:{en:{},gu:{},hi:{}}, lang:'en', theme:'',
-  counters:{}, gifts:[], story:[], events:[], voice:[], video:[], pins:[], media:[],
-  guestRow:null
+  person: {display_name:'', slug:'', birthday:''},
+  guest:  {name:'', whatsapp:'', relation:'', occasion:'', note:''},
+  password: '',
+  texts: {en:{}, gu:{}, hi:{}},
+  lang: 'en',
+  theme: '',
+  counters: {},
+  gifts: [], story: [], events: [],
+  voice: [], video: [], pins: [], media: [],
+  guestRow: null
 };
 
+/* ---------- Requester editor state ---------- */
 window.RE = {
-  lang:'en', texts:{en:{},gu:{},hi:{}}, shared:{}, theme:'',
-  counters:{}, gifts:[], story:[], events:[], voice:[], video:[], pins:[], media:[]
+  lang: 'en',
+  texts: {en:{}, gu:{}, hi:{}},
+  shared: {},
+  theme: '',
+  counters: {},
+  gifts: [], story: [], events: [],
+  voice: [], video: [], pins: [], media: []
 };
 
-window.COUNTERS=[
-  {id:'ct1',icon:'💬',labelKey:'ct1_label',dtKey:'ct1_datetime',tzKey:'ct1_datetime_tz',dispKey:'ct1_dispdate',showKey:'ct1_show',mainLabel:'ctMain1_label',mainDate:'ctMain1_date',mainRow:'ctMain1'},
-  {id:'ct2',icon:'💕',labelKey:'ct2_label',dtKey:'ct2_datetime',tzKey:'ct2_datetime_tz',dispKey:'ct2_dispdate',showKey:'ct2_show',mainLabel:'ctMain2_label',mainDate:'ctMain2_date',mainRow:'ctMain2'},
-  {id:'ct3',icon:'💍',labelKey:'ct3_label',dtKey:'ct3_datetime',tzKey:'ct3_datetime_tz',dispKey:'ct3_dispdate',showKey:'ct3_show',mainLabel:'ctMain3_label',mainDate:'ctMain3_date',mainRow:'ctMain3'}
+/* ---------- Counter definitions ---------- */
+window.COUNTERS = [
+  {id:'ct1', icon:'💬',
+    labelKey:'ct1_label', dtKey:'ct1_datetime', tzKey:'ct1_datetime_tz',
+    dispKey:'ct1_dispdate', showKey:'ct1_show',
+    mainLabel:'ctMain1_label', mainDate:'ctMain1_date', mainRow:'ctMain1'},
+  {id:'ct2', icon:'💕',
+    labelKey:'ct2_label', dtKey:'ct2_datetime', tzKey:'ct2_datetime_tz',
+    dispKey:'ct2_dispdate', showKey:'ct2_show',
+    mainLabel:'ctMain2_label', mainDate:'ctMain2_date', mainRow:'ctMain2'},
+  {id:'ct3', icon:'💍',
+    labelKey:'ct3_label', dtKey:'ct3_datetime', tzKey:'ct3_datetime_tz',
+    dispKey:'ct3_dispdate', showKey:'ct3_show',
+    mainLabel:'ctMain3_label', mainDate:'ctMain3_date', mainRow:'ctMain3'}
 ];
 
-window.TEXT_FIELDS=[
+/* ---------- Text fields schema ---------- */
+window.TEXT_FIELDS = [
   'pageTitle','mainHeadline','subhead1','subhead2','greeting','msg1','msg2','msg3','msg4','msg5',
-  'signoff','namesBadge','fromLabel','countersTitle',
+  'signoff','namesBadge','fromLabel','countersTitle','ct1_label','ct2_label','ct3_label',
   'openMemoriesBtn','storyBtnText','mapBtnText','uploadBtnText','voiceBtnText','videoBtnText',
   'giftSectionTitle','eventSectionTitle',
   'openLine1','openLine2','cakeHint',
