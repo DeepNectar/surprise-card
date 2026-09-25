@@ -14,8 +14,6 @@ let SS_floaterTimer = null;
 let SS_rafId = null;
 let SS_timerToken = 0;
 let SS_lastVisibilityChange = 0;
-let SS_ownPlaylist = [];
-let SS_ownIdx = -1;
 
 const SS_PHOTO_EFFECTS = ['fx-ken-in','fx-ken-out','fx-pan-lr','fx-pan-rl','fx-pan-tb','fx-rotate','fx-fade','fx-blur','fx-scale-down'];
 const SS_VIDEO_EFFECTS = ['vfx-fade','vfx-zoom','vfx-slide-right','vfx-blur'];
@@ -70,7 +68,7 @@ function SS_playVideo(v, unmuteBtn){
 }
 function SS_fadeMusic(target, duration){
   const a = $('audioPlayer'); if(!a) return;
-  if(a.paused && target>0 && a.src){ a.play().catch(()=>{}); }
+  /* Do NOT call a.play() here — leave playback state alone. Only change volume. */
   const start = a.volume;
   if(Math.abs(start-target)<0.01){ a.volume = target; return; }
   const steps = Math.max(1, Math.round((duration||400)/30));
@@ -86,6 +84,9 @@ function SS_fadeMusic(target, duration){
 function SS_normalMusicVol(){ return window.getVol('slideshow'); }
 function SS_duckedMusicVol(){ return Math.max(0.05, SS_normalMusicVol()*0.35); }
 
+/* ✅ Ensure the audio player is set up for slideshow context, but DO NOT
+   interrupt a song that is already playing. Just update the context/list
+   so future 'ended' events advance through the correct playlist. */
 function SS_ensureMusicPlaying(){
   const a = $('audioPlayer'); if(!a) return;
   const mode = (S.CURR.shared||{}).music_mode || 'both';
@@ -96,25 +97,26 @@ function SS_ensureMusicPlaying(){
   if(mode==='slideshow') wantList = ssList;
   else wantList = (ssList && ssList.length) ? ssList : cardList;
   if(!wantList || !wantList.length) return;
-  const sameList = SS_ownPlaylist && SS_ownPlaylist.length===wantList.length && SS_ownPlaylist.every((u,i)=>u===wantList[i]);
 
-  /* ✅ If the same playlist is already loaded, just resume / keep playing.
-     DO NOT reload the source — that resets currentTime to 0. */
-  if(sameList && SS_ownIdx>=0 && a.src){
-    const vol = window.getVol(ssList.length ? 'slideshow' : 'card');
-    if(a.paused){
-      a.volume = vol;
-      a.play().catch(()=>{});
-    } else {
-      a.volume = vol;
-    }
+  /* Tell music.js the context & list — but DON'T touch a.src if it's playing. */
+  if(window.__setCurrCtx__) window.__setCurrCtx__('slideshow', wantList);
+
+  /* If a song is already playing, just adjust volume. Do nothing else. */
+  if(a.src && !a.paused){
+    a.volume = window.getVol(ssList.length ? 'slideshow' : 'card');
+    const mt = $('musicToggle');
+    if(mt){ mt.textContent='🔊'; mt.classList.add('visible'); }
     return;
   }
 
-  /* Different playlist (or first time) — load the first song */
-  SS_ownPlaylist = wantList;
-  SS_ownIdx = 0;
-  window.__setCurrCtx__ && window.__setCurrCtx__('slideshow', wantList);
+  /* Nothing is playing — start the first song in the list. */
+  if(a.src){
+    /* Paused with a src → resume it. */
+    a.volume = window.getVol(ssList.length ? 'slideshow' : 'card');
+    a.play().catch(()=>{});
+    return;
+  }
+  /* Fresh start */
   a.volume = window.getVol(ssList.length ? 'slideshow' : 'card');
   a.loop = false;
   a.src = wantList[0];
@@ -125,34 +127,8 @@ function SS_ensureMusicPlaying(){
   }).catch(()=>{});
 }
 
-function SS_advanceMusicOnSlideChange(){
-  const mode = (S.CURR.shared||{}).music_mode || 'both';
-  if(mode==='card') return;
-  const a = $('audioPlayer'); if(!a) return;
-  const ssList = window.buildPlaylistFor('slideshow');
-  const cardList = window.buildPlaylistFor('card');
-  let wantList;
-  if(mode==='slideshow') wantList = ssList;
-  else wantList = (ssList && ssList.length) ? ssList : cardList;
-  if(!wantList || wantList.length<2) return;
-
-  /* ✅ KEY FIX:
-     If the current song is still mid-play (not paused, not ended, and
-     has progressed past 0), leave it alone. The next song should only
-     start when the current one truly finishes. */
-  if(a.src && !a.paused && !a.ended && a.currentTime > 0.01){
-    return;
-  }
-
-  /* Otherwise, advance to next song in the playlist order */
-  SS_ownPlaylist = wantList;
-  SS_ownIdx = (SS_ownIdx+1)%wantList.length;
-  a.src = wantList[SS_ownIdx];
-  a.volume = window.getVol('slideshow');
-  a.play().then(()=>{
-    const mt = $('musicToggle'); if(mt){ mt.textContent='🔊'; mt.classList.add('visible'); }
-  }).catch(()=>{});
-}
+/* ✅ REMOVED: SS_advanceMusicOnSlideChange — no longer needed.
+   Songs are only advanced by the 'ended' event in music.js. */
 
 function SS_applySavedMediaOrder(rows){
   const s = S.CURR.shared || {};
@@ -381,6 +357,7 @@ function SS_updateSlide(){
   SS_applyEffectToCurrent();
 
   if(cur.type==='video'){
+    /* Duck music under video */
     if(SS_musicDucked!==true){ SS_fadeMusic(SS_duckedMusicVol(), 300); SS_musicDucked = true; }
     const v = slideEl.querySelector('video');
     const ub = slideEl.querySelector('.unmute-btn');
@@ -392,17 +369,14 @@ function SS_updateSlide(){
     const pb = $('slideshowProgress');
     if(pb){ pb.style.transition='none'; pb.style.width='0%'; }
   }else{
+    /* Photo slide — make sure music context is set, but DO NOT touch playback. */
     const a = $('audioPlayer');
     const mode = (S.CURR.shared||{}).music_mode || 'both';
-    if(a && mode!=='card'){
-      if(a.paused || !a.src){
-        if(a.src){ a.play().catch(()=>{}); }
-        else { SS_ensureMusicPlaying(); }
-      } else {
-        /* ✅ Only advance if the song genuinely ended. Otherwise keep playing. */
-        SS_advanceMusicOnSlideChange();
-      }
+    if(a && mode!=='card' && (!a.src || a.paused)){
+      /* Music wasn't started yet — start it now. */
+      SS_ensureMusicPlaying();
     }
+    /* Un-duck if we were ducked for a video */
     if(SS_musicDucked!==false){ SS_fadeMusic(SS_normalMusicVol(), 300); SS_musicDucked = false; }
 
     SS_preloadAhead();
@@ -466,7 +440,6 @@ function SS_close(){
   const dots = $('slideshowDots'); if(dots) dots.innerHTML = '';
   const pb = $('slideshowProgress'); if(pb){ pb.style.transition='none'; pb.style.width='0%'; }
   SS_musicDucked = false;
-  SS_ownPlaylist = []; SS_ownIdx = -1;
   const a = $('audioPlayer');
   if(a){ a.volume = window.getVol('card'); }
   if(typeof window.startMusicFor==='function') window.startMusicFor('card');
