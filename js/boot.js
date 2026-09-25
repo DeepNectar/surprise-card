@@ -1,111 +1,60 @@
 /* ============================================================
-   boot.js — Main boot sequence
+   boot.js — Main boot sequence (must be last script)
    ============================================================ */
 (function(){
 'use strict';
 
 const S = window.__PAGE_STATE__;
 
-/* ---------- Home floaters ---------- */
-function initHomeFloaters(){
-  const fl = $('homeFloaters');
-  if(!fl) return;
-  const pool = ['❤️','💕','✨','🌹','💖','⭐','💛','🎀','🦋','💫','🌸','🎈','💝','🕊️'];
-  for(let i = 0; i < 22; i++){
-    const s = document.createElement('span');
-    s.className = 'hf';
-    s.textContent = pool[Math.floor(Math.random() * pool.length)];
-    s.style.left = (Math.random() * 100) + '%';
-    s.style.fontSize = (0.9 + Math.random() * 1.3) + 'rem';
-    s.style.animationDuration = (9 + Math.random() * 10) + 's';
-    s.style.animationDelay = (Math.random() * 10) + 's';
-    fl.appendChild(s);
-  }
-}
-
-/* ---------- Body floaters ---------- */
-function initBodyFloaters(){
-  const emo = ['❤️','💛','🌹','💕','✨','💗','🌺','💝','🌸','💞'];
-  for(let i = 0; i < 18; i++){
-    const sp = document.createElement('span');
-    sp.className = 'float-item';
-    sp.textContent = emo[Math.floor(Math.random() * emo.length)];
-    sp.style.left = (Math.random() * 100) + '%';
-    sp.style.fontSize = (1.2 + Math.random() * 1.4) + 'rem';
-    sp.style.animationDuration = (9 + Math.random() * 9) + 's';
-    sp.style.animationDelay = (Math.random() * 8) + 's';
-    document.body.appendChild(sp);
-  }
-}
-
-/* ---------- Boot ---------- */
 async function boot(){
-  document.body.setAttribute('data-theme', 'romantic');
-
-  /* Init all timezone selects before anything else */
+  document.body.setAttribute('data-theme','romantic');
   initAllTzSelects();
 
-  /* Decorative floaters */
-  initBodyFloaters();
-  initHomeFloaters();
+  /* Floating emoji background */
+  const emo = ['❤️','💛','🌹','💕','✨','💗','🌺','💝','🌸','💞'];
+  for(let i=0;i<18;i++){
+    const sp = document.createElement('span');
+    sp.className = 'float-item';
+    sp.textContent = emo[Math.floor(Math.random()*emo.length)];
+    sp.style.left = (Math.random()*100)+'%';
+    sp.style.fontSize = (1.2+Math.random()*1.4)+'rem';
+    sp.style.animationDuration = (9+Math.random()*9)+'s';
+    sp.style.animationDelay = (Math.random()*8)+'s';
+    document.body.appendChild(sp);
+  }
 
-  /* Wipe expired people */
   try{ await sb.wipeExpired(); }catch(e){}
 
-  /* Load people */
   S.PEOPLE = await sb.people() || [];
-
-  /* Load shared settings for admin login check */
   const gs = await sb.getSet(null);
   S.CURR.shared = {
     adminPassword: (gs && gs['shared__adminPassword']) || FALLBACK_ADMIN_PW,
     adminLoginEnabled: (gs && gs['shared__adminLoginEnabled'])
   };
 
-  /* Build home */
   if(window.buildHome) window.buildHome();
-
-  /* Restore session */
   if(window.SS_restoreSession && window.SS_restoreSession()) return;
 
-  /* Wipe check + reviews */
   await window.checkWipe();
   await window.loadReviews();
-
   setInterval(window.checkWipe, 60000);
 
-  /* Auto-open person from URL */
   const urlP = new URLSearchParams(location.search).get('person');
   if(urlP){
-    const p = S.PEOPLE.find(x => x.slug === urlP);
-    if(p){
-      setTimeout(() => {
-        const ep = S.PEOPLE.filter(x => x.enabled !== false);
-        const btns = document.querySelectorAll('#homeGrid .home-btn');
-        const idx = ep.findIndex(x => x.id === p.id);
-        if(idx >= 0 && btns[idx]) btns[idx].click();
-      }, 400);
-    }
+    const p = S.PEOPLE.find(x=>x.slug===urlP);
+    if(p) setTimeout(()=>{
+      const ep = S.PEOPLE.filter(x=>x.enabled!==false);
+      const btns = document.querySelectorAll('#homeGrid .home-btn');
+      const idx = ep.findIndex(x=>x.id===p.id);
+      if(idx>=0 && btns[idx]) btns[idx].click();
+    }, 400);
   }
 }
 
-/* ---------- Close all modals helper ---------- */
-window.__closeAllModals__ = function(){
-  ['closingModal','adminPanel','guestPanel','guestEditModal','requesterEditModal',
-   'addPersonModal','personLoginModal','adminLoginModal','reviewModal',
-   'storyModal','mapModal','pinModal','uploadModal',
-   'personDetailsModal','shareModal'].forEach(id => {
-    const el = $(id);
-    if(el) el.classList.remove('active');
-  });
-  const ss = $('slideshowOverlay');
-  if(ss) ss.classList.remove('active');
-};
-
-/* ---------- Kick off ---------- */
+/* Wait for DOMContentLoaded in case this loads before HTML body ends */
 if(document.readyState === 'loading'){
   document.addEventListener('DOMContentLoaded', boot);
-} else {
+}else{
   boot();
 }
 

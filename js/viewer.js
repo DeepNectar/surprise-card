@@ -1,119 +1,45 @@
 /* ============================================================
-   viewer.js — Viewer screen + person loading + reactions
+   viewer.js — Viewer screen + person loading
    ============================================================ */
 (function(){
 'use strict';
+
 const S = window.__PAGE_STATE__;
 
-/* ---------- Seen counter ---------- */
-function seenKeyFor(p){ return 'seen_' + (p && p.slug ? p.slug : 'anon'); }
-function recordSeen(p){
-  if(!p) return 0;
-  let n = 0;
-  try{
-    const k = seenKeyFor(p);
-    n = parseInt(localStorage.getItem(k) || '0', 10) || 0;
-    n += 1;
-    localStorage.setItem(k, String(n));
-  }catch(e){}
-  return n;
-}
-
-/* ---------- Reactions ---------- */
-function reactionKeyFor(p){ return 'react_' + (p && p.slug ? p.slug : 'anon'); }
-function loadReactions(p){
-  try{
-    const raw = localStorage.getItem(reactionKeyFor(p));
-    if(!raw) return {heart:0, love:0, cry:0, party:0};
-    const obj = JSON.parse(raw);
-    return {
-      heart: obj.heart || 0,
-      love:  obj.love  || 0,
-      cry:   obj.cry   || 0,
-      party: obj.party || 0
-    };
-  }catch(e){ return {heart:0, love:0, cry:0, party:0}; }
-}
-function saveReactions(p, obj){
-  try{ localStorage.setItem(reactionKeyFor(p), JSON.stringify(obj)); }catch(e){}
-}
-window.paintReactions = function(){
-  const r = S.REACTIONS || {heart:0, love:0, cry:0, party:0};
-  const map = {heart:'rbCountHeart', love:'rbCountLove', cry:'rbCountCry', party:'rbCountParty'};
-  Object.keys(map).forEach(k => {
-    const el = $(map[k]);
-    if(el) el.textContent = String(r[k] || 0);
-  });
-};
-
-/* ---------- Dark mode ---------- */
-window.setDarkMode = function(on){
-  S.DARK_MODE = !!on;
-  document.body.setAttribute('data-darkmode', on ? 'true' : 'false');
-  try{ localStorage.setItem('surprise_darkmode', on ? '1' : '0'); }catch(e){}
-  const btn  = $('darkmodeToggle'); if(btn)  btn.textContent  = on ? '☀️' : '🌙';
-  const vbtn = $('viewerDarkBtn');  if(vbtn) vbtn.textContent = on ? '☀️' : '🌙';
-};
-(function initDarkMode(){
-  let on = false;
-  try{ const v = localStorage.getItem('surprise_darkmode'); on = (v === '1'); }catch(e){}
-  setDarkMode(on);
-})();
-
-/* ---------- WhatsApp share ---------- */
-window.openWhatsAppShare = function(){
-  const p = S.CURRENT_PERSON;
-  if(!p){ __showToast('❌ No person to share', false); return; }
-  const link = PUBLIC_CARD_LINK + (p.slug ? ('?person=' + encodeURIComponent(p.slug)) : '');
-  const name = p.display_name || p.slug || 'friend';
-  const msg = '💕 A surprise awaits for ' + name + '!\n\nOpen here: ' + link;
-  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
-};
-
-/* ---------- Load person into state ---------- */
 window.loadPersonIntoState = async function(p){
   S.CURRENT_PERSON = p;
   S.CURR = {
-    texts: {}, textsByLang: {en:{}, gu:{}, hi:{}}, shared: {},
-    gifts: [], story: [], events: [], voice: [], video: [], pins: [], media: []
+    texts:{}, textsByLang:{en:{},gu:{},hi:{}}, shared:{},
+    gifts:[], story:[], events:[], voice:[], video:[], pins:[], media:[]
   };
   if(!p) return;
-
   const set = await sb.getSet(p.id);
   S.CURRENT_SETTINGS = set;
-
   const shared = {};
-  Object.keys(set).forEach(k => {
-    if(k.startsWith('shared__')) shared[k.substring(8)] = set[k];
-  });
+  Object.keys(set).forEach(k=>{ if(k.startsWith('shared__')) shared[k.substring(8)] = set[k]; });
   S.CURR.shared = shared;
 
   function buildTextsForLang(L){
-    const out = {};
-    const pref = 'texts__' + L + '_';
-    Object.keys(set).forEach(k => {
-      if(k.startsWith(pref)) out[k.substring(pref.length)] = set[k];
-    });
-    Object.keys(set).forEach(k => {
-      if(!k.startsWith('texts__')) return;
-      const rest = k.substring(7);
-      if(/^(en|gu|hi)_/.test(rest)) return;
-      if(out[rest] === undefined) out[rest] = set[k];
-    });
+    const out = {}; const pref = 'texts__'+L+'_';
+    Object.keys(set).forEach(k=>{ if(k.startsWith(pref)) out[k.substring(pref.length)] = set[k]; });
+    if(L==='en'){
+      Object.keys(set).forEach(k=>{
+        if(!k.startsWith('texts__')) return;
+        const rest = k.substring(7);
+        if(/^(en|gu|hi)_/.test(rest)) return;
+        if(out[rest]===undefined) out[rest] = set[k];
+      });
+    }
     return out;
   }
-  S.CURR.textsByLang = {
-    en: buildTextsForLang('en'),
-    gu: buildTextsForLang('gu'),
-    hi: buildTextsForLang('hi')
-  };
-  const def = (shared.defaultLang || 'en').toLowerCase();
-  S.CURR_LANG = (['en','gu','hi'].indexOf(def) >= 0) ? def : 'en';
+  S.CURR.textsByLang = {en:buildTextsForLang('en'), gu:buildTextsForLang('gu'), hi:buildTextsForLang('hi')};
+  const def = (shared.defaultLang||'en').toLowerCase();
+  S.CURR_LANG = (['en','gu','hi'].indexOf(def)>=0) ? def : 'en';
   S.CURR.texts = S.CURR.textsByLang[S.CURR_LANG] || {};
 
   const lt = $('langToggle');
   if(lt){
-    lt.textContent = S.CURR_LANG === 'en' ? 'EN' : (S.CURR_LANG === 'gu' ? 'ગુ' : 'हि');
+    lt.textContent = S.CURR_LANG==='en' ? 'EN' : (S.CURR_LANG==='gu' ? 'ગુ' : 'हि');
     lt.dataset.state = S.CURR_LANG;
   }
 
@@ -125,55 +51,31 @@ window.loadPersonIntoState = async function(p){
   S.CURR.pins   = await sb.rows(T_PINS,   p.id) || [];
   S.CURR.media  = await sb.rows(T_MEDIA,  p.id) || [];
 };
-window.__loadPersonIntoState__ = window.loadPersonIntoState;
 
-/* ---------- Show viewer ---------- */
+window.__loadPersonIntoState__ = loadPersonIntoState;
+
 window.showViewerFor = async function(person, startNow){
   if(!S.CURRENT_PERSON || S.CURRENT_PERSON.id !== person.id){
     await loadPersonIntoState(person);
   }
   $('homeScreen').classList.add('hidden');
   show($('viewerScreen'));
+  $('viewerPreviewTag').style.display = S.PREVIEW_MODE ? 'inline-block' : 'none';
+  $('viewerEditCardBtn').classList.toggle('visible', !!S.REQUESTER_MODE && !S.PREVIEW_MODE);
+  $('musicToggle').classList.toggle('visible', window.buildPlaylistFor('card').length>0);
+  $('langToggle').classList.toggle('visible', true);
 
-  const previewTag = $('viewerPreviewTag');
-  if(previewTag) previewTag.style.display = S.PREVIEW_MODE ? 'inline-block' : 'none';
-  const editBtn = $('viewerEditCardBtn');
-  if(editBtn) editBtn.classList.toggle('visible', !!S.REQUESTER_MODE && !S.PREVIEW_MODE);
-  const mt = $('musicToggle');
-  if(mt) mt.classList.toggle('visible', window.buildPlaylistFor('card').length > 0);
   const lt = $('langToggle');
   if(lt){
-    lt.classList.toggle('visible', true);
-    lt.textContent = S.CURR_LANG === 'en' ? 'EN' : (S.CURR_LANG === 'gu' ? 'ગુ' : 'हि');
+    lt.textContent = S.CURR_LANG==='en' ? 'EN' : (S.CURR_LANG==='gu' ? 'ગુ' : 'हि');
     lt.dataset.state = S.CURR_LANG;
   }
-
-  const seenCount = recordSeen(person);
-  const seenPill = $('viewerSeenPill');
-  if(seenPill){
-    seenPill.textContent = '👁️ Opened ' + seenCount + '×';
-    seenPill.style.display = 'inline-block';
-  }
-
-  S.REACTIONS = loadReactions(person);
-  window.paintReactions();
-
-  try{
-    const rKey = 'ribbon_' + ((person && person.slug) || 'anon');
-    if(!sessionStorage.getItem(rKey)){
-      const card = $('mainCard');
-      if(card){
-        card.classList.add('ribbon-intro');
-        setTimeout(() => card.classList.remove('ribbon-intro'), 1800);
-      }
-      sessionStorage.setItem(rKey, '1');
-    }
-  }catch(e){}
-
   window.renderCardFull();
   if(startNow) window.startCard();
-  window.scrollTo(0, 0);
+  window.scrollTo(0,0);
 };
+
+window.__showViewerForPreview__ = showViewerFor;
 
 window.startCard = function(){
   if(S.CARD_STARTED) return;
@@ -183,95 +85,48 @@ window.startCard = function(){
   window.startMusicFor('card');
 };
 
-/* ---------- Render card full ---------- */
 window.renderCardFull = function(){
-  const t = S.CURR.texts || {};
-  const s = S.CURR.shared || {};
+  const t = S.CURR.texts || {}, s = S.CURR.shared || {};
   document.body.setAttribute('data-theme', s.theme || 'romantic');
   document.title = t.pageTitle || 'A surprise awaits 💕';
-
   txt($('mainHeadlineEl'), t.mainHeadline || 'Happy Celebration!');
-  const subheadEl = $('subheadEl');
-  if(subheadEl) subheadEl.innerHTML =
-    (t.subhead1 || '') + (t.subhead2 ? ('<br>' + esc(t.subhead2)) : '');
+  $('subheadEl').innerHTML = (t.subhead1||'') + (t.subhead2 ? ('<br>'+t.subhead2) : '');
   txt($('typeGreeting'), '');
-  txt($('namesBadgeEl'), t.namesBadge || '');
-  txt($('fromLabel'), t.fromLabel || 'Lots of love from');
-  txt($('openMemoriesBtnTextEl'), t.openMemoriesBtn || 'Open Memories');
-  txt($('storyBtnTextEl'), t.storyBtnText || 'Our Story');
-  txt($('mapBtnTextEl'), t.mapBtnText || 'Map of Memories');
-  txt($('uploadBtnTextEl'), t.uploadBtnText || 'Share Photo');
-  txt($('voiceBtnTextEl'), t.voiceBtnText || 'Play Voice Message');
-  txt($('videoBtnTextEl'), t.videoBtnText || 'Play Video Message');
-  txt($('countersMainTitle'), t.countersTitle || 'Our journey so far');
+  txt($('namesBadgeEl'), t.namesBadge||'');
+  txt($('fromLabel'), t.fromLabel||'Lots of love from');
+  txt($('openMemoriesBtnTextEl'), t.openMemoriesBtn||'Open Memories');
+  txt($('storyBtnTextEl'), t.storyBtnText||'Our Story');
+  txt($('mapBtnTextEl'), t.mapBtnText||'Map of Memories');
+  txt($('uploadBtnTextEl'), t.uploadBtnText||'Share Photo');
+  txt($('voiceBtnTextEl'), t.voiceBtnText||'Play Voice Message');
+  txt($('videoBtnTextEl'), t.videoBtnText||'Play Video Message');
+  txt($('countersMainTitle'), t.countersTitle||'Our journey so far');
 
-  COUNTERS.forEach(c => {
-    const label = s[c.labelKey] || t[c.labelKey] || '';
+  COUNTERS.forEach(c=>{
+    const label = s[c.labelKey] || '';
     txt($(c.mainLabel), label);
-    txt($(c.mainDate), s[c.dispKey] || '');
-    const on = String(s[c.showKey]) !== 'false';
-    const row = $(c.mainRow);
-    if(row) row.classList.toggle('counter-hidden', !on);
+    txt($(c.mainDate), s[c.dispKey]||'');
+    const on = String(s[c.showKey])!=='false';
+    $(c.mainRow).classList.toggle('counter-hidden', !on);
   });
+  const anyVisible = COUNTERS.some(c=>String(s[c.showKey])!=='false');
+  $('countersMain').classList.toggle('hidden-box', !anyVisible);
 
-  const anyVisible = COUNTERS.some(c => String(s[c.showKey]) !== 'false');
-  const countersMain = $('countersMain');
-  if(countersMain) countersMain.classList.toggle('hidden-box', !anyVisible);
-
-  const storyBtn = $('storyBtn');
-  if(storyBtn) storyBtn.style.display =
-    (s.enableStory === 'true' && S.CURR.story.length) ? 'inline-flex' : 'none';
-  const mapBtn = $('mapBtn');
-  if(mapBtn) mapBtn.style.display =
-    (s.enableMap === 'true' && S.CURR.pins.length) ? 'inline-flex' : 'none';
-  const uploadBtn = $('uploadBtn');
-  if(uploadBtn) uploadBtn.style.display =
-    (s.enableUpload === 'true') ? 'inline-flex' : 'none';
-  const voiceRow = $('voiceRow');
-  if(voiceRow) voiceRow.style.display =
-    (s.enableVoiceMsg === 'true' && S.CURR.voice.length) ? 'flex' : 'none';
-  const videoRow = $('videoMsgRow');
-  if(videoRow) videoRow.style.display =
-    (s.enableVideoMsg === 'true' && S.CURR.video.length) ? 'flex' : 'none';
+  $('storyBtn').style.display = (s.enableStory==='true' && S.CURR.story.length) ? 'inline-flex' : 'none';
+  $('mapBtn').style.display   = (s.enableMap==='true'   && S.CURR.pins.length)  ? 'inline-flex' : 'none';
+  $('uploadBtn').style.display = (s.enableUpload==='true') ? 'inline-flex' : 'none';
+  $('voiceRow').style.display   = (s.enableVoiceMsg==='true' && S.CURR.voice.length) ? 'flex' : 'none';
+  $('videoMsgRow').style.display = (s.enableVideoMsg==='true' && S.CURR.video.length) ? 'flex' : 'none';
 
   window.renderGifts();
   window.renderEvents();
   window.updateCounters();
 };
 
-/* ---------- Bindings ---------- */
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('#reactionBar .reaction-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const key = btn.dataset.react;
-      const emoji = btn.dataset.emoji || '❤️';
-      S.REACTIONS[key] = (S.REACTIONS[key] || 0) + 1;
-      saveReactions(S.CURRENT_PERSON, S.REACTIONS);
-      window.paintReactions();
-
-      const burst = document.createElement('span');
-      burst.className = 'rb-burst';
-      burst.textContent = emoji;
-      btn.appendChild(burst);
-      setTimeout(() => burst.remove(), 720);
-
-      if(window.fireworksBurst){
-        const r = btn.getBoundingClientRect();
-        fireworksBurst(r.left + r.width / 2, r.top);
-      }
-    });
-  });
-
-  const dt = $('darkmodeToggle');
-  if(dt) dt.onclick = () => setDarkMode(!S.DARK_MODE);
-  const vd = $('viewerDarkBtn');
-  if(vd) vd.onclick = () => setDarkMode(!S.DARK_MODE);
-  const vs = $('viewerShareBtn');
-  if(vs) vs.onclick = () => openWhatsAppShare();
-
+document.addEventListener('DOMContentLoaded', ()=>{
   const back = $('viewerBackBtn');
-  if(back) back.onclick = () => {
-    if(window.SS_clearSession) window.SS_clearSession();
+  if(back) back.onclick = ()=>{
+    window.SS_clearSession && window.SS_clearSession();
     hide($('viewerScreen'));
     S.PREVIEW_MODE = false;
     S.CARD_STARTED = false;
