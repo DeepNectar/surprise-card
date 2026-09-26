@@ -1,5 +1,5 @@
 /* ============================================================
-   slideshow.js — Full-screen memories slideshow
+   slideshow.js — Full-screen memories slideshow (FIXED)
    ============================================================ */
 (function(){
 'use strict';
@@ -211,10 +211,10 @@ window.SS_restoreSession = function(){
       show($('viewerScreen'));
       S.PREVIEW_MODE = false;
       S.REQUESTER_MODE = false;
-      $('viewerPreviewTag').style.display = 'none';
-      $('viewerEditCardBtn').classList.remove('visible');
-      $('musicToggle').classList.toggle('visible', window.buildPlaylistFor('card').length > 0);
-      $('langToggle').classList.toggle('visible', true);
+      const pt = $('viewerPreviewTag'); if(pt) pt.style.display = 'none';
+      const eb = $('viewerEditCardBtn'); if(eb) eb.classList.remove('visible');
+      const mt = $('musicToggle'); if(mt) mt.classList.toggle('visible', window.buildPlaylistFor('card').length > 0);
+      const lt = $('langToggle'); if(lt) lt.classList.toggle('visible', true);
       window.setDarkMode(window.isDarkForPerson ? window.isDarkForPerson(p) : false);
       window.renderCardFull();
       window.startCard();
@@ -460,12 +460,10 @@ function SS_close(){
 
   SS_musicDucked = false;
 
-  // ✅ Restore card music so it keeps playing during the closing modal
   const a = $('audioPlayer');
   if(a) a.volume = window.getVol('card');
   if(typeof window.startMusicFor === 'function') window.startMusicFor('card');
 
-  // ✅ Show closing modal (music continues underneath)
   if(!S.PREVIEW_MODE && S.CURRENT_PERSON) window.openClosingModal();
 }
 
@@ -547,11 +545,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-/* Expose for other modules */
-window.SS_isOpen = false;
+/* ============================================================
+   FIXED: Expose SS_isOpen ONLY via getter/setter.
+   Never assign window.SS_isOpen = false first — that creates a
+   data property that cannot be redefined as an accessor.
+   ============================================================ */
 Object.defineProperty(window, 'SS_isOpen', {
+  configurable: true,
   get: () => SS_isOpen,
-  set: v => { SS_isOpen = v; }
+  set: v => { SS_isOpen = !!v; }
 });
 
 })();

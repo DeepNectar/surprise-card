@@ -1,5 +1,5 @@
 /* ============================================================
-   boot.js — Main boot sequence
+   boot.js — Main boot sequence (robust + visible errors)
    ============================================================ */
 (function(){
 'use strict';
@@ -24,7 +24,7 @@ function initHomeFloaters(){
   }
 }
 
-/* ---------- Body floaters (fewer + lighter for speed) ---------- */
+/* ---------- Body floaters ---------- */
 function initBodyFloaters(){
   if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const emo = ['❤️','💛','🌹','💕','✨','💗','🌺','💝','🌸','💞'];
@@ -40,75 +40,107 @@ function initBodyFloaters(){
   }
 }
 
+/* ---------- Visible fatal error ---------- */
+function showBootError(err){
+  console.error('BOOT FAILED:', err);
+  const g = document.getElementById('homeGrid');
+  if(g){
+    g.innerHTML =
+      '<div style="grid-column:1/-1;color:#fff;padding:1.2rem;text-align:center;' +
+      'background:rgba(196,30,58,.45);border-radius:.9rem;border:2px solid #ffd700;' +
+      'font-size:.9rem;line-height:1.55;max-width:520px;margin:0 auto;">' +
+      '<strong style="font-size:1.1rem;">⚠️ Could not load the home screen</strong><br><br>' +
+      '<span style="opacity:.9;font-size:.82rem;word-break:break-word;">' +
+      (err && err.message ? esc(err.message) : 'Unknown error') +
+      '</span><br><br>' +
+      '<button onclick="location.reload()" style="background:#ffd700;color:#4a0016;border:none;' +
+      'padding:.55rem 1.3rem;border-radius:40px;font-weight:800;cursor:pointer;font-size:.85rem;">' +
+      '🔄 Reload page</button></div>';
+  }
+  if(window.__diagLog) window.__diagLog('BOOT ERROR: ' + (err && err.message));
+}
+
 /* ---------- Boot ---------- */
 async function boot(){
-  // Home always uses romantic theme; viewer keeps its own scoped theme.
-  document.body.setAttribute('data-theme', 'romantic');
-  const viewer = document.getElementById('viewerScreen');
-  if(viewer){
-    viewer.setAttribute('data-theme', 'romantic');
-    viewer.setAttribute('data-darkmode', 'false');
-  }
-
-  /* Init all timezone selects before anything else */
-  initAllTzSelects();
-
-  /* Decorative floaters */
-  initBodyFloaters();
-  initHomeFloaters();
-
-  /* Show home skeleton immediately so UI paints fast */
-  if(window.renderHomeSkeleton) window.renderHomeSkeleton();
-
-  /* Wipe expired people — capture them for finished list */
   try{
-    const wiped = await sb.wipeExpiredAndReturn();
-    if(wiped && wiped.length) S.__justWiped = wiped;
-  }catch(e){}
-
-  /* Load people */
-  S.PEOPLE = await sb.people() || [];
-
-  /* Load shared settings for admin login check */
-  const gs = await sb.getSet(null);
-  S.CURR.shared = {
-    adminPassword: (gs && gs['shared__adminPassword']) || FALLBACK_ADMIN_PW,
-    adminLoginEnabled: (gs && gs['shared__adminLoginEnabled'])
-  };
-
-  /* ✅ Load reviews BEFORE building home so they render on first paint */
-  try{
-    await window.loadReviews();
-  }catch(e){
-    console.warn('loadReviews failed', e && e.message);
-    S.REVIEWS = [];
-  }
-
-  /* Build home (fast) — now S.REVIEWS is already populated */
-  if(window.buildHome) window.buildHome();
-
-  /* Restore session */
-  if(window.SS_restoreSession && window.SS_restoreSession()) return;
-
-  /* Wipe check (periodic). Reviews already loaded above. */
-  setInterval(window.checkWipe, 60000);
-
-  /* Auto-open person from URL */
-  const urlP = new URLSearchParams(location.search).get('person');
-  if(urlP){
-    const p = S.PEOPLE.find(x => x.slug === urlP);
-    if(p){
-      setTimeout(() => {
-        const ep = S.PEOPLE.filter(x => x.enabled !== false);
-        const btns = document.querySelectorAll('#homeGrid .home-btn');
-        const idx = ep.findIndex(x => x.id === p.id);
-        if(idx >= 0 && btns[idx]) btns[idx].click();
-      }, 250);
+    document.body.setAttribute('data-theme', 'romantic');
+    const viewer = document.getElementById('viewerScreen');
+    if(viewer){
+      viewer.setAttribute('data-theme', 'romantic');
+      viewer.setAttribute('data-darkmode', 'false');
     }
+
+    initAllTzSelects();
+    initBodyFloaters();
+    initHomeFloaters();
+
+    if(window.renderHomeSkeleton) window.renderHomeSkeleton();
+
+    // Critical globals check
+    if(typeof sb === 'undefined' || !sb || typeof sb.people !== 'function'){
+      throw new Error('Supabase helper (sb) is missing. Check that supabase.js loaded.');
+    }
+    if(typeof window.__PAGE_STATE__ === 'undefined'){
+      throw new Error('config.js did not initialise __PAGE_STATE__. Check load order.');
+    }
+    if(typeof window.buildHome !== 'function'){
+      throw new Error('home.js did not load (buildHome missing).');
+    }
+
+    // Wipe expired (non-blocking for UI)
+    try{
+      const wiped = await sb.wipeExpiredAndReturn();
+      if(wiped && wiped.length) S.__justWiped = wiped;
+    }catch(e){
+      console.warn('wipeExpiredAndReturn failed:', e && e.message);
+    }
+
+    S.PEOPLE = await sb.people() || [];
+
+    let gs = {};
+    try{
+      gs = await sb.getSet(null) || {};
+    }catch(e){
+      console.warn('getSet(null) failed:', e && e.message);
+    }
+    S.CURR.shared = {
+      adminPassword: (gs && gs['shared__adminPassword']) || FALLBACK_ADMIN_PW,
+      adminLoginEnabled: (gs && gs['shared__adminLoginEnabled'])
+    };
+
+    // Reviews first so home paints with them
+    try{
+      await window.loadReviews();
+    }catch(e){
+      console.warn('loadReviews failed', e && e.message);
+      S.REVIEWS = [];
+    }
+
+    if(window.buildHome) window.buildHome();
+
+    // Session restore (after home is painted)
+    if(window.SS_restoreSession && window.SS_restoreSession()) return;
+
+    setInterval(window.checkWipe, 60000);
+
+    // Deep-link ?person=slug
+    const urlP = new URLSearchParams(location.search).get('person');
+    if(urlP){
+      const p = S.PEOPLE.find(x => x.slug === urlP);
+      if(p){
+        setTimeout(() => {
+          const ep = S.PEOPLE.filter(x => x.enabled !== false);
+          const btns = document.querySelectorAll('#homeGrid .home-btn:not(.guest)');
+          const idx = ep.findIndex(x => x.id === p.id);
+          if(idx >= 0 && btns[idx]) btns[idx].click();
+        }, 300);
+      }
+    }
+  }catch(err){
+    showBootError(err);
   }
 }
 
-/* ---------- Close all modals helper ---------- */
 window.__closeAllModals__ = function(){
   ['closingModal','adminPanel','guestPanel','guestEditModal','requesterEditModal',
    'addPersonModal','personLoginModal','adminLoginModal','reviewModal',
@@ -121,7 +153,6 @@ window.__closeAllModals__ = function(){
   if(ss) ss.classList.remove('active');
 };
 
-/* ---------- Kick off ---------- */
 if(document.readyState === 'loading'){
   document.addEventListener('DOMContentLoaded', boot);
 } else {

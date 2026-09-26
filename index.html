@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
 <meta name="theme-color" content="#8b0028">
@@ -12,16 +13,16 @@
 <link rel="preconnect" href="https://drive.google.com">
 <link rel="preconnect" href="https://ueuxnkrvvnvldfwgiyqy.supabase.co">
 
-<link rel="stylesheet" href="css/variables.css">
-<link rel="stylesheet" href="css/base.css">
-<link rel="stylesheet" href="css/home.css">
-<link rel="stylesheet" href="css/lock.css">
-<link rel="stylesheet" href="css/opening.css">
-<link rel="stylesheet" href="css/modals.css">
-<link rel="stylesheet" href="css/panels.css">
-<link rel="stylesheet" href="css/viewer.css">
-<link rel="stylesheet" href="css/slideshow.css">
-<link rel="stylesheet" href="css/responsive.css">
+<link rel="stylesheet" href="variables.css">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="home.css">
+<link rel="stylesheet" href="lock.css">
+<link rel="stylesheet" href="opening.css">
+<link rel="stylesheet" href="modals.css">
+<link rel="stylesheet" href="panels.css">
+<link rel="stylesheet" href="viewer.css">
+<link rel="stylesheet" href="slideshow.css">
+<link rel="stylesheet" href="responsive.css">
 </head>
 <body data-theme="romantic">
 
@@ -576,7 +577,7 @@
         <button type="button" class="repeat-add" id="reBulkAddMedia" style="background:#2a5fd1;">📥 Add all IDs above</button>
       </div>
     </div>
-        <div class="panel-actions">
+    <div class="panel-actions">
       <button type="button" class="panel-btn save" id="reSave">💾 Save My Card</button>
       <button type="button" class="panel-btn edit" id="reExportBtn" style="background:linear-gradient(135deg,#0a7a3d,#0f8f48);">📤 Export My Data</button>
       <button type="button" class="panel-btn edit" id="reImportBtn" style="background:linear-gradient(135deg,#2a5fd1,#1a3d8f);">📥 Import My Data</button>
@@ -1167,46 +1168,47 @@
 <button type="button" class="darkmode-toggle" id="darkmodeToggle" aria-label="Toggle dark mode">🌙</button>
 
 <!-- ============ SCRIPTS (order matters!) ============ -->
+<script src="diagnostic.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <!-- Core -->
-<script src="js/config.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/supabase.js"></script>
+<script src="config.js"></script>
+<script src="utils.js"></script>
+<script src="supabase.js"></script>
 
 <!-- Effects -->
-<script src="js/fireworks.js"></script>
+<script src="fireworks.js"></script>
 
 <!-- Home & reviews (reviews must load before home) -->
-<script src="js/reviews.js"></script>
-<script src="js/home.js"></script>
+<script src="reviews.js"></script>
+<script src="home.js"></script>
 
 <!-- Access flow -->
-<script src="js/lock.js"></script>
-<script src="js/opening.js"></script>
-<script src="js/viewer.js"></script>
+<script src="lock.js"></script>
+<script src="opening.js"></script>
+<script src="viewer.js"></script>
 
 <!-- Card content -->
-<script src="js/typewriter.js"></script>
-<script src="js/counters.js"></script>
-<script src="js/gifts.js"></script>
-<script src="js/events.js"></script>
-<script src="js/voice.js"></script>
-<script src="js/video.js"></script>
-<script src="js/story.js"></script>
-<script src="js/map.js"></script>
-<script src="js/upload.js"></script>
-<script src="js/music.js"></script>
-<script src="js/language.js"></script>
-<script src="js/closing.js"></script>
-<script src="js/slideshow.js"></script>
+<script src="typewriter.js"></script>
+<script src="counters.js"></script>
+<script src="gifts.js"></script>
+<script src="events.js"></script>
+<script src="voice.js"></script>
+<script src="video.js"></script>
+<script src="story.js"></script>
+<script src="map.js"></script>
+<script src="upload.js"></script>
+<script src="music.js"></script>
+<script src="language.js"></script>
+<script src="closing.js"></script>
+<script src="slideshow.js"></script>
 
 <!-- Admin & guest flows -->
-<script src="js/admin.js"></script>
-<script src="js/guests.js"></script>
-<script src="js/requester.js"></script>
+<script src="admin.js"></script>
+<script src="guests.js"></script>
+<script src="requester.js"></script>
 
 <!-- Boot (must be last) -->
-<script src="js/boot.js"></script>
+<script src="boot.js"></script>
 </body>
 </html>

@@ -33,12 +33,13 @@ function isBirthdayToday(p){
   return p && p.birthday && daysUntilBirthday(p.birthday) === 0;
 }
 
-/* ---------- Fast skeleton renderer (shows instantly while people load) ---------- */
+/* ---------- Fast skeleton ---------- */
 window.renderHomeSkeleton = function(){
   const g = $('homeGrid');
-  if(!g || g.children.length > 0) return;
+  if(!g) return;
+  // Always show skeleton while loading
   let html = '';
-  for(let i = 0; i < 4; i++){
+  for(let i = 0; i < 5; i++){
     html += '<div class="home-btn skeleton skel-btn"></div>';
   }
   g.innerHTML = html;
@@ -53,14 +54,12 @@ window.triggerAdminPrompt = async function(){
   window.openAdminLoginFull();
 };
 
-/* ---------- Render home (fast) ---------- */
+/* ---------- Render home ---------- */
 window.buildHome = function(){
   const g = $('homeGrid');
   if(!g) return;
 
-  // Build a DocumentFragment for speed
   const frag = document.createDocumentFragment();
-
   const ep = (S.PEOPLE || []).filter(p => p.enabled !== false);
 
   ep.forEach(p => {
@@ -82,6 +81,7 @@ window.buildHome = function(){
     frag.appendChild(b);
   });
 
+  // Guest button always present
   const gb = document.createElement('button');
   gb.type = 'button';
   gb.className = 'home-btn guest';
@@ -95,14 +95,12 @@ window.buildHome = function(){
   g.innerHTML = '';
   g.appendChild(frag);
 
-  // Render finished section
   renderFinishedSection();
-
   if(window.renderHomeReviews) window.renderHomeReviews();
   renderHomeStats();
 };
 
-/* ---------- Finished section (auto-wiped people) ---------- */
+/* ---------- Finished section ---------- */
 function renderFinishedSection(){
   const wrap = $('homeFinished');
   if(!wrap) return;
@@ -128,7 +126,6 @@ function renderFinishedSection(){
     }).join('');
   }
 
-  // Toggle collapse
   const head = $('homeFinishedHead');
   if(head && head.dataset._bound !== '1'){
     head.dataset._bound = '1';
@@ -138,7 +135,6 @@ function renderFinishedSection(){
     };
   }
 
-  // Buttons — show "this surprise is finished" message (or remove if admin)
   wrap.querySelectorAll('.finished-btn').forEach(btn => {
     btn.onclick = async (e) => {
       if(e && e.preventDefault) e.preventDefault();
@@ -163,7 +159,7 @@ function renderFinishedSection(){
 }
 window.renderFinishedSection = renderFinishedSection;
 
-/* ---------- Stats chip bar ---------- */
+/* ---------- Stats ---------- */
 function renderHomeStats(){
   const bar = $('homeStatsBar');
   if(!bar) return;
@@ -184,7 +180,7 @@ function renderHomeStats(){
   }
   if(hasUpcoming) html += '<div class="home-stat-chip">🎂 <span class="hsc-num">upcoming</span></div>';
   bar.innerHTML = html;
-  bar.style.display = people ? 'flex' : 'none';
+  bar.style.display = people || reviews ? 'flex' : 'none';
 }
 
 /* ---------- Person click ---------- */
@@ -289,7 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(window.applyHomeReviewsCollapsed) window.applyHomeReviewsCollapsed();
   });
 
-  // Finished section initial state
   const fwrap = $('homeFinished');
   if(fwrap){
     fwrap.classList.toggle('collapsed', FINISHED_COLLAPSED);
