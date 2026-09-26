@@ -76,14 +76,21 @@ async function boot(){
     adminLoginEnabled: (gs && gs['shared__adminLoginEnabled'])
   };
 
-  /* Build home (fast) */
+  /* ✅ Load reviews BEFORE building home so they render on first paint */
+  try{
+    await window.loadReviews();
+  }catch(e){
+    console.warn('loadReviews failed', e && e.message);
+    S.REVIEWS = [];
+  }
+
+  /* Build home (fast) — now S.REVIEWS is already populated */
   if(window.buildHome) window.buildHome();
 
   /* Restore session */
   if(window.SS_restoreSession && window.SS_restoreSession()) return;
 
-  /* Wipe check + reviews (non-blocking reviews) */
-  window.loadReviews().catch(() => {});
+  /* Wipe check (periodic). Reviews already loaded above. */
   setInterval(window.checkWipe, 60000);
 
   /* Auto-open person from URL */
