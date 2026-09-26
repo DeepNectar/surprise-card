@@ -16,6 +16,7 @@ let SS_musicDucked = false;
 let SS_touchSX = 0;
 let SS_touchSY = 0;
 let SS_floaterTimer = null;
+let SS_currentEffect = null;
 
 const SS_PHOTO_EFFECTS = ['fx-ken-in','fx-ken-out','fx-pan-lr','fx-pan-rl','fx-pan-tb','fx-rotate','fx-fade','fx-blur','fx-scale-down'];
 const SS_VIDEO_EFFECTS = ['vfx-fade','vfx-zoom','vfx-slide-right','vfx-blur'];
@@ -53,16 +54,19 @@ function SS_floaterDensity(){
 }
 
 function SS_resetVideo(v){
+  if(!v) return;
   try{ v.pause(); v.currentTime = 0; }catch(e){}
 }
 
 function SS_playVideo(v, unmuteBtn){
+  if(!v) return;
   try{ v.currentTime = 0; }catch(e){}
   v.muted = false;
   const p = v.play();
   if(p && p.then){
     p.then(() => { if(unmuteBtn) unmuteBtn.classList.remove('show'); })
      .catch(() => {
+       if(!v) return;
        v.muted = true;
        const p2 = v.play();
        if(p2 && p2.then){
@@ -243,7 +247,7 @@ function SS_buildSlides(){
       v.playsInline = true;
       v.setAttribute('playsinline', '');
       v.setAttribute('webkit-playsinline', '');
-      v.preload = 'auto';
+      v.preload = 'metadata';
       v.setAttribute('disablepictureinpicture', '');
       v.muted = true;
       d.appendChild(v);
@@ -254,8 +258,8 @@ function SS_buildSlides(){
       ub.textContent = '🔊 Tap for sound';
       ub.setAttribute('aria-label', 'Unmute video');
       const doUnmute = e => {
-        e.preventDefault();
-        e.stopPropagation();
+        if(e && e.preventDefault) e.preventDefault();
+        if(e && e.stopPropagation) e.stopPropagation();
         v.muted = false;
         v.volume = 1;
         const p = v.play();
@@ -282,6 +286,7 @@ function SS_buildSlides(){
       img.src = 'https://lh3.googleusercontent.com/d/' + s.drive_id + '=w2400';
       img.onerror = () => { img.src = 'https://drive.google.com/thumbnail?id=' + s.drive_id + '&sz=w2400'; };
       img.className = 'fx-target';
+      img.loading = 'eager';
       d.appendChild(img);
     }
 
@@ -304,6 +309,11 @@ function SS_buildSlides(){
   });
 }
 
+/* -------------------------------------------------------------
+   SAFE effect applier.
+   NO forced reflow. NO animation reset.
+   This was causing Safari/Chrome to crash + auto-reload.
+   ------------------------------------------------------------- */
 function SS_applyEffectToCurrent(){
   const t = $('slidesTrack');
   if(!t) return;
@@ -311,6 +321,7 @@ function SS_applyEffectToCurrent(){
   const slideEl = t.children[SS_IDX];
   if(!cur || !slideEl) return;
 
+  // Clear any previously applied effect on this slide only
   SS_PHOTO_EFFECTS.forEach(c => slideEl.classList.remove(c));
   SS_VIDEO_EFFECTS.forEach(c => slideEl.classList.remove(c));
 
@@ -319,22 +330,12 @@ function SS_applyEffectToCurrent(){
   if(cur.type === 'video'){
     const fx = SS_pickVideoEffect();
     slideEl.classList.add(fx);
-    const v = slideEl.querySelector('video');
-    if(v){
-      v.style.animation = 'none';
-      void v.offsetWidth;
-      v.style.animation = '';
-    }
+    SS_currentEffect = fx;
   } else {
     const fx = SS_pickPhotoEffect();
     slideEl.classList.add(fx);
     SS_applyIntensity(slideEl);
-    const img = slideEl.querySelector('img.fx-target');
-    if(img){
-      img.style.animation = 'none';
-      void img.offsetWidth;
-      img.style.animation = '';
-    }
+    SS_currentEffect = fx;
   }
 }
 
@@ -396,14 +397,16 @@ function SS_updateSlide(){
     const v = slideEl.querySelector('video');
     const ub = slideEl.querySelector('.unmute-btn');
     if(v){
-      const tryPlay = () => SS_playVideo(v, ub);
-      if(v.readyState >= 1) tryPlay();
-      else {
-        v.addEventListener('loadedmetadata', tryPlay, {once: true});
-        setTimeout(() => {
-          if(SS_isOpen && SS[SS_IDX] === cur && v.paused) tryPlay();
-        }, 800);
-      }
+      // Delay play slightly to let the DOM + transition settle.
+      // Prevents Safari/Chrome compositor crash on fast transitions.
+      SS_VIDEO_TIMER = setTimeout(() => {
+        if(!SS_isOpen || SS[SS_IDX] !== cur) return;
+        const tryPlay = () => SS_playVideo(v, ub);
+        if(v.readyState >= 1) tryPlay();
+        else {
+          v.addEventListener('loadedmetadata', tryPlay, {once: true});
+        }
+      }, 200);
     }
     const pb = $('slideshowProgress');
     if(pb){ pb.style.transition = 'none'; pb.style.width = '0%'; }
@@ -546,14 +549,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ============================================================
-   FIXED: Expose SS_isOpen ONLY via getter/setter.
-   Never assign window.SS_isOpen = false first — that creates a
-   data property that cannot be redefined as an accessor.
+   Expose SS_isOpen as an accessor.
+   NOTE: if this fails (e.g. property already defined), we
+   fall back to plain data property + SS_setOpen().
    ============================================================ */
-Object.defineProperty(window, 'SS_isOpen', {
-  configurable: true,
-  get: () => SS_isOpen,
-  set: v => { SS_isOpen = !!v; }
-});
+try{
+  Object.defineProperty(window, 'SS_isOpen', {
+    configurable: true,
+    get: () => SS_isOpen,
+    set: v => { SS_isOpen = !!v; }
+  });
+}catch(e){
+  window.SS_isOpen = SS_isOpen;
+  window.SS_setOpen = v => { SS_isOpen = !!v; };
+}
 
 })();
