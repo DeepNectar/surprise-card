@@ -23,7 +23,7 @@ window.T_REVIEWS  = 'reviews';
 
 /* ---------- App-wide constants ---------- */
 window.FALLBACK_ADMIN_PW = 'Deepnectar@@1617@@';
-window.PUBLIC_CARD_LINK  = 'https://surprise-await-h-d.netlify.app/';
+window.PUBLIC_CARD_LINK  = 'https://surprise-clickandcheck-your-surprise2.netlify.app/';
 window.DEFAULT_TZ        = 'Asia/Dubai';
 window.MODAL_IMG_DURATION_MS = 10000;
 
