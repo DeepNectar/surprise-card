@@ -11,16 +11,14 @@
     Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
-  for = "/css/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/js/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
   for = "/*.html"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
+
+# NOTE: JS and CSS caching removed intentionally.
+# Every deploy invalidates them so users always get the newest version.
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
